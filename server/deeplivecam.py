@@ -1,5 +1,7 @@
 import logging
+import os
 import sys
+import threading
 import time
 from types import ModuleType
 
@@ -16,9 +18,48 @@ _UI_STUB.update_status = lambda *a, **k: None
 if "modules.ui" not in sys.modules:
     sys.modules["modules.ui"] = _UI_STUB
 
+# onnxruntime / MIGraphX emit noisy lines per-inference on stderr (C-level, so
+# Python logging config can't reach them). Filter them at the fd.
+_BLOCKED_STDERR = ("param type mismatch", "unknown warning option")
+_stderr_filter_installed = False
+_stderr_filter_lock = threading.Lock()
+
+
+def _install_stderr_filter() -> None:
+    """Permanently tee fd 2 through a filter that drops known ORT/MIGraphX
+    noise lines (e.g. the per-frame 'MIGraphX: param type mismatch' spam).
+    Every other stderr line is forwarded unchanged. Idempotent + thread-safe."""
+    global _stderr_filter_installed
+    with _stderr_filter_lock:
+        if _stderr_filter_installed:
+            return
+        real_stderr = os.dup(2)
+        read_fd, write_fd = os.pipe()
+        os.dup2(write_fd, 2)
+        os.close(write_fd)
+
+        def pump() -> None:
+            real = os.fdopen(real_stderr, "w", buffering=1)
+            try:
+                with os.fdopen(read_fd, "r", buffering=1) as stream:
+                    for line in stream:
+                        if not any(blocked in line for blocked in _BLOCKED_STDERR):
+                            real.write(line)
+            except Exception:  # never let the filter crash the process
+                logger.debug("stderr filter stopped", exc_info=True)
+            finally:
+                real.close()
+
+        threading.Thread(target=pump, name="stderr-filter", daemon=True).start()
+        _stderr_filter_installed = True
+
 
 def _select_providers(provider: str) -> list:
     import onnxruntime as ort
+
+    # Silence MIGraphX/ROCm provider noise (e.g. "param type mismatch" spam
+    # logged per-inference at INFO level) while keeping WARNING+ visible.
+    ort.set_default_logger_severity(2)
 
     available = ort.get_available_providers()
     if provider == "auto":
@@ -65,6 +106,7 @@ class DeepLiveCamProcessor:
         # ---- real DLC wiring (server runtime) ----
         if dlc_repo_path not in sys.path:
             sys.path.insert(0, dlc_repo_path)
+        _install_stderr_filter()
         import modules.globals as g
 
         g.headless = True
