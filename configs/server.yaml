@@ -1,0 +1,20 @@
+server:
+  host: 0.0.0.0
+  port: 8881
+camera:                    # negotiated target the server asks the client to send
+  width: 1280
+  height: 720
+  fps: 60
+network:
+  stun: false
+  turn: false
+  prefer_codec: h264
+processing:                # machine-side ONLY; face + swap settings come from the laptop
+  execution_provider: auto   # auto picks migraphx (ROCm 7) or rocm (ROCm 6) on the RX 7900 XTX
+  model_dir: third_party/Deep-Live-Cam/models
+  warmup_face: /home/dodi/Downloads/smp.jpg   # server-local face; preloads models at startup
+performance:
+  drop_frames: true
+  poll_interval_ms: 2
+metrics:
+  enabled: true

@@ -1,0 +1,12 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+aiortc>=1.9.0
+av>=12.0
+numpy<2.0
+opencv-python-headless>=4.9
+pydantic>=2.7
+PyYAML>=6.0
+# AMD GPU inference on the server — pin ONE of these (NOT both):
+#   ROCm 6.x: onnxruntime-rocm==1.22.2.post1
+#   ROCm 7.x: onnxruntime-migraphx
+# DLC's requirements.txt must not silently downgrade this afterwards.

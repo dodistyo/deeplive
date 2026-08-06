@@ -1,0 +1,29 @@
+# configs/client.yaml  (the laptop = control point)
+client:
+  server_url: "ws://192.168.1.35:8881/ws/laptop1"
+  client_id: laptop1
+camera:
+  index: 0
+  width: 1280
+  height: 720
+  fps: 60
+virtualcam:
+  device: /dev/video10
+  width: 1280
+  height: 720
+  fps: 60
+processing:                     # chosen on the laptop, applied on the desktop
+  source_face: /home/dodistyo/Downloads/prabowo.jpg
+  frame_processors: [face_swapper]
+  many_faces: false
+  enhancer: false
+  opacity: 1.0
+  mouth_mask: true
+  poisson_blend: true
+  detection_interval_ms: 66
+network:
+  stun: false
+  turn: false
+  prefer_codec: h264
+performance:
+  drop_frames: true
