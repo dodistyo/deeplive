@@ -82,10 +82,20 @@ Then pre-warm the MIOpen kernel cache once: `python scripts/bench.py <source.jpg
 
 ```bash
 sudo apt install v4l2loopback-dkms v4l2loopback-utils
-# No exclusive_caps: on v4l2loopback 0.12.7 it leaves the device stuck advertising
-# neither capture nor output. Load WITHOUT it so it always advertises both.
+# Load WITH exclusive_caps=1 so the device advertises capture-only. Browsers
+# (Chrome/Firefox getUserMedia) refuse a capture+output device and show
+# "your webcam is being used or blocked by another application". The old
+# "load WITHOUT exclusive_caps" advice only applied to the broken 0.12.7.
 # (Kernel 7.0: apt's 0.12.7 is broken — build 0.15.4 from source, see RUNBOOK.)
-sudo modprobe v4l2loopback devices=1 video_nr=10 card_label="DeepLiveCam"
+sudo modprobe v4l2loopback devices=1 video_nr=10 card_label="DeepLiveCam" exclusive_caps=1
+```
+
+Persist it across reboots:
+
+```bash
+echo 'options v4l2loopback devices=1 video_nr=10 card_label="DeepLiveCam" exclusive_caps=1' \
+  | sudo tee /etc/modprobe.d/v4l2loopback.conf
+sudo update-initramfs -u
 ```
 
 ## Run

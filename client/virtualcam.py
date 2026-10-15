@@ -1,6 +1,7 @@
 import logging
 import threading
 
+import cv2
 import pyvirtualcam
 from pyvirtualcam import PixelFormat
 
@@ -17,7 +18,7 @@ class VirtualCamera:
         self._holder = holder
         self._cam = cam or pyvirtualcam.Camera(device=device, width=width,
                                                height=height, fps=fps,
-                                               fmt=PixelFormat.BGR)
+                                               fmt=PixelFormat.YUYV)
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self.run, name="virtualcam", daemon=True)
         logger.info("virtual camera: %s %dx%d@%d", self._cam.device, width, height, fps)
@@ -47,7 +48,7 @@ class VirtualCamera:
                 last_seq = seq
                 continue
             try:
-                self._cam.send(frame)
+                self._cam.send(cv2.cvtColor(frame, cv2.COLOR_BGR2YUV_YUYV))
                 last_seq = seq
                 self._cam.sleep_until_next_frame()
             except Exception:
